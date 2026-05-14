@@ -208,6 +208,3 @@ Ayrıca görsel tasarım tarafında tema rengi, kart yapısı, grid görünüm, 
 ## Geliştirici Notu
 
 NovaStore Catalog, temel bir e-ticaret uygulamasının sadeleştirilmiş mobil versiyonu olarak hazırlanmıştır. Projede amaç karmaşık bir alışveriş sistemi kurmak değil, Flutter ile katalog, detay ve sepet akışını anlaşılır şekilde göstermektir.
-
-- **Netlify Linki:**
-- 
