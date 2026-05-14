@@ -5,7 +5,7 @@ NovaStore Catalog, Flutter ile geliştirilmiş basit ama görsel olarak düzenli
 Bu proje, mobil uygulama geliştirme sürecinde temel Flutter yapısını, ekranlar arası geçişleri, kart tabanlı listelemeyi, tema kullanımını, asset yönetimini ve basit state mantığını göstermek amacıyla hazırlanmıştır.
 
 ## Proje Amacı
-
+ 
 Bu uygulamanın amacı, bir e-ticaret uygulamasının temel katalog yapısını küçük ölçekte simüle etmektir. Kullanıcı ana ekranda ürünleri görebilir, kategoriye göre filtreleme yapabilir, ürün detayına geçebilir ve istediği ürünleri sepete ekleyebilir.
 
 Projede özellikle şu konular uygulanmıştır:
