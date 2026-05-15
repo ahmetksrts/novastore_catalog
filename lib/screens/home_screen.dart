@@ -1,11 +1,13 @@
-import '../data/product_data.dart';
 import '../models/product.dart';
 import '../widgets/product_card.dart';
+import '../services/background_image_api_service.dart';
+import '../utils/app_texts.dart';
 import 'package:flutter/material.dart';
 import 'cart_screen.dart';
 import 'product_list_screen.dart';
 
 class HomeScreen extends StatefulWidget {
+  final List<Product> products;
   final List<Product> cartItems;
   final void Function(Product product) onAddToCart;
   final void Function(Product product) onRemoveFromCart;
@@ -16,6 +18,7 @@ class HomeScreen extends StatefulWidget {
 
   const HomeScreen({
     super.key,
+    required this.products,
     required this.cartItems,
     required this.onAddToCart,
     required this.onRemoveFromCart,
@@ -30,27 +33,25 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // Ana sayfada seçilen kategori burada tutuluyor
   String selectedCategory = 'All';
+  int bannerRefreshKey = 0;
 
-  // Dil kontrolünü kısa kullanmak için getter ekledim
+  final BackgroundImageApiService backgroundImageApiService =
+      BackgroundImageApiService();
+
   bool get isTurkish => widget.selectedLanguage == 'TR';
 
   List<Product> get filteredProducts {
-    // Tümü seçiliyse bütün ürünleri gösteriyorum
     if (selectedCategory == 'All') {
-      return products;
+      return widget.products;
     }
-
-    // Seçilen kategoriye göre ürünleri filtreliyorum
-    return products.where((product) {
+    return widget.products.where((product) {
       return product.category == selectedCategory;
     }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Tema durumuna göre ekranda kullanılan renkleri belirliyorum
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final Color cardColor = Theme.of(context).cardColor;
     final Color textColor = isDark ? Colors.white : const Color(0xFF111827);
@@ -65,9 +66,9 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: Text(isTurkish ? 'Keşfet' : 'Discover'),
         actions: [
-          // Sağ üstteki ikon sepet ekranına geçiş yapıyor
           IconButton(
             onPressed: () {
+              _refreshBanner();
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -128,7 +129,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     _buildInfoCard(
                                       context,
                                       icon: Icons.inventory_2_outlined,
-                                      title: products.length.toString(),
+                                      title: widget.products.length.toString(),
                                       subtitle: isTurkish ? 'Ürün' : 'Products',
                                     ),
                                     const SizedBox(height: 14),
@@ -157,7 +158,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     child: _buildInfoCard(
                                       context,
                                       icon: Icons.inventory_2_outlined,
-                                      title: products.length.toString(),
+                                      title: widget.products.length.toString(),
                                       subtitle: isTurkish ? 'Ürün' : 'Products',
                                     ),
                                   ),
@@ -260,7 +261,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Text(
           selectedCategory == 'All'
               ? (isTurkish ? 'Öne Çıkanlar' : 'Featured Picks')
-              : _getCategoryTitle(selectedCategory),
+              : AppTexts.category(selectedCategory, widget.selectedLanguage),
           style: TextStyle(
             color: textColor,
             fontSize: 21,
@@ -269,10 +270,12 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         GestureDetector(
           onTap: () {
+            _refreshBanner();
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => ProductListScreen(
+                  products: widget.products,
                   cartItems: widget.cartItems,
                   onAddToCart: widget.onAddToCart,
                   onRemoveFromCart: widget.onRemoveFromCart,
@@ -294,31 +297,27 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildCategoryList() {
+    final List<String> categories = widget.products
+        .map((product) => product.category)
+        .where((category) => category.trim().isNotEmpty)
+        .toSet()
+        .toList();
+
     return SizedBox(
       height: 38,
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
           _buildCategoryChip(
-            label: isTurkish ? 'Tümü' : 'All',
+            label: AppTexts.category('All', widget.selectedLanguage),
             value: 'All',
           ),
-          _buildCategoryChip(
-            label: 'Laptop',
-            value: 'Laptop',
-          ),
-          _buildCategoryChip(
-            label: isTurkish ? 'Telefon' : 'Phone',
-            value: 'Telefon',
-          ),
-          _buildCategoryChip(
-            label: isTurkish ? 'Saat' : 'Watch',
-            value: 'Akıllı Saat',
-          ),
-          _buildCategoryChip(
-            label: isTurkish ? 'Aksesuar' : 'Accessory',
-            value: 'Aksesuar',
-          ),
+          ...categories.map((category) {
+            return _buildCategoryChip(
+              label: AppTexts.category(category, widget.selectedLanguage),
+              value: category,
+            );
+          }),
         ],
       ),
     );
@@ -350,7 +349,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Dil seçimini küçük tutmak için dropdown kullandım
   Widget _buildLanguageDropdown() {
     return Container(
       height: 42,
@@ -377,6 +375,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
           onChanged: (value) {
             if (value != null) {
+              _refreshBanner();
               widget.onLanguageChanged(value);
             }
           },
@@ -385,7 +384,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Bu buton gündüz gece modu arasında geçiş yapıyor
   Widget _buildThemeButton() {
     return Container(
       height: 42,
@@ -401,7 +399,10 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: IconButton(
         padding: EdgeInsets.zero,
-        onPressed: () => widget.onThemeChanged(!widget.isDarkMode),
+        onPressed: () {
+          _refreshBanner();
+          widget.onThemeChanged(!widget.isDarkMode);
+        },
         icon: Icon(
           widget.isDarkMode ? Icons.dark_mode : Icons.light_mode,
           color: const Color(0xFFC9A227),
@@ -412,11 +413,116 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHeroBanner({required bool isDesktop}) {
+    return FutureBuilder<String?>(
+      key: ValueKey(bannerRefreshKey),
+      future: backgroundImageApiService.fetchBackgroundImage(
+        forceRefresh: bannerRefreshKey > 0,
+      ),
+      builder: (context, snapshot) {
+        final String? imageUrl = snapshot.data;
+
+        return Container(
+          height: isDesktop ? 170 : 132,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFC9A227).withValues(alpha: 0.26),
+                blurRadius: 22,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (imageUrl != null)
+                Image.network(
+                  imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return _buildHeroFallbackBackground();
+                  },
+                )
+              else
+                _buildHeroFallbackBackground(),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      const Color(0xFF020617).withValues(alpha: 0.86),
+                      const Color(0xFF111827).withValues(alpha: 0.58),
+                      const Color(0xFFC9A227).withValues(alpha: 0.72),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(18),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.18),
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.workspace_premium,
+                        color: Colors.white,
+                        size: 32,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            isTurkish
+                                ? 'Premium teknoloji kataloğu'
+                                : 'Premium tech catalog',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 19,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            isTurkish
+                                ? 'Seçili ürünleri keşfet ve sepete ekle.'
+                                : 'Explore selected products and add them to your cart.',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 13.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildHeroFallbackBackground() {
     return Container(
-      height: isDesktop ? 150 : 122,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
@@ -424,60 +530,6 @@ class _HomeScreenState extends State<HomeScreen> {
             Color(0xFFC9A227),
           ],
         ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFC9A227).withValues(alpha: 0.26),
-            blurRadius: 22,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: const Icon(
-              Icons.workspace_premium,
-              color: Colors.white,
-              size: 32,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  isTurkish
-                      ? 'Premium teknoloji kataloğu'
-                      : 'Premium tech catalog',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  isTurkish
-                      ? 'Seçili ürünleri keşfet ve sepete ekle.'
-                      : 'Explore selected products and add them to your cart.',
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 13.5,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -534,7 +586,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Kategoriye tıklanınca ürün listesi aynı ekranda filtreleniyor
   Widget _buildCategoryChip({
     required String label,
     required String value,
@@ -545,7 +596,9 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: () {
         setState(() {
           selectedCategory = value;
+          bannerRefreshKey++;
         });
+        backgroundImageApiService.clearCachedImage();
       },
       child: Container(
         margin: const EdgeInsets.only(right: 10),
@@ -577,21 +630,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Kategori başlığını seçilen dile göre düzenliyorum
-  String _getCategoryTitle(String category) {
-    if (isTurkish) {
-      return category;
-    }
-
-    switch (category) {
-      case 'Telefon':
-        return 'Phone';
-      case 'Akıllı Saat':
-        return 'Watch';
-      case 'Aksesuar':
-        return 'Accessory';
-      default:
-        return category;
-    }
+  void _refreshBanner() {
+    backgroundImageApiService.clearCachedImage();
+    setState(() {
+      bannerRefreshKey++;
+    });
   }
 }

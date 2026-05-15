@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../models/product.dart';
 import '../screens/product_detail_screen.dart';
 
 class ProductCard extends StatelessWidget {
-  // Bu widget tek bir ürün kartını temsil ediyor
   final Product product;
 
-  // Ürünün sepette olup olmadığını kontrol etmek için sepet listesini alıyorum
   final List<Product> cartItems;
   final void Function(Product product) onAddToCart;
 
-  // Dil ve tema renkleri ana ekrandan gönderiliyor
   final String selectedLanguage;
   final Color cardColor;
   final Color textColor;
@@ -27,25 +25,18 @@ class ProductCard extends StatelessWidget {
     required this.mutedTextColor,
   });
 
-  // Metinlerin hangi dilde gösterileceğini buradan kontrol ediyorum
   bool get isTurkish => selectedLanguage == 'TR';
 
   @override
   Widget build(BuildContext context) {
     final bool isInCart = cartItems.contains(product);
 
-    // İngilizce görünümde fiyatı sabit kur üzerinden dolara çeviriyorum
-    final int dollarPrice = (product.price / 45).round();
-    final String priceText = isTurkish
-        ? '${product.price.toStringAsFixed(0)} TL'
-        : '\$$dollarPrice';
-
+    final String priceText = _formatPrice(product.price);
     final String categoryText = _getCategoryText(product.category);
 
     return InkWell(
       borderRadius: BorderRadius.circular(20),
       onTap: () {
-        // Karta basıldığında ürün bilgisi detay sayfasına taşınıyor
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -76,7 +67,7 @@ class ProductCard extends StatelessWidget {
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -84,34 +75,39 @@ class ProductCard extends StatelessWidget {
                 alignment: Alignment.topRight,
                 child: Icon(
                   isInCart ? Icons.check_circle : Icons.favorite_border,
-                  size: 22,
+                  size: 24,
                   color: isInCart ? const Color(0xFFC9A227) : mutedTextColor,
                 ),
               ),
-              const SizedBox(height: 4),
-              Center(
-                child: Container(
-                  width: 92,
-                  height: 78,
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFC9A227).withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Image.asset(
-                    product.imagePath,
-                    fit: BoxFit.contain,
+              const SizedBox(height: 8),
+              Expanded(
+                child: Center(
+                  child: Container(
+                    width: 168,
+                    height: 142,
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFC9A227).withValues(alpha: 0.09),
+                      borderRadius: BorderRadius.circular(26),
+                      border: Border.all(
+                        color: const Color(0xFFC9A227).withValues(alpha: 0.10),
+                      ),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: _buildProductImage(),
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               Text(
                 product.name,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: textColor,
-                  fontSize: 14.5,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -120,7 +116,7 @@ class ProductCard extends StatelessWidget {
                 categoryText,
                 style: TextStyle(
                   color: mutedTextColor,
-                  fontSize: 13,
+                  fontSize: 14,
                 ),
               ),
               const SizedBox(height: 6),
@@ -130,7 +126,7 @@ class ProductCard extends StatelessWidget {
                     child: Text(
                       priceText,
                       style: const TextStyle(
-                        fontSize: 15,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFFC9A227),
                       ),
@@ -151,25 +147,127 @@ class ProductCard extends StatelessWidget {
     );
   }
 
-  // Kategori adını seçilen dile göre gösteriyorum
-  String _getCategoryText(String category) {
+  Widget _buildProductImage() {
+    final String imageUrl = product.imageUrl.trim();
+
+    if (imageUrl.startsWith('http')) {
+      return Image.network(
+        imageUrl,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+        webHtmlElementStrategy: kIsWeb
+            ? WebHtmlElementStrategy.prefer
+            : WebHtmlElementStrategy.never,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) {
+            return child;
+          }
+
+          return const Center(
+            child: SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Color(0xFFC9A227),
+              ),
+            ),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) {
+          return _buildLocalFallbackImage();
+        },
+      );
+    }
+
+    if (imageUrl.isNotEmpty) {
+      return Image.asset(
+        imageUrl,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+        errorBuilder: (context, error, stackTrace) {
+          return _buildLocalFallbackImage();
+        },
+      );
+    }
+
+    return _buildLocalFallbackImage();
+  }
+
+  Widget _buildLocalFallbackImage() {
+    final String category = product.category.toLowerCase();
+    final String name = product.name.toLowerCase();
+
+    String assetPath = 'assets/images/phone.png';
+
+    if (category.contains('computer') ||
+        category.contains('laptop') ||
+        name.contains('macbook') ||
+        name.contains('imac')) {
+      assetPath = 'assets/images/laptop.png';
+    } else if (category.contains('tablet') || name.contains('ipad')) {
+      assetPath = 'assets/images/tablet.png';
+    } else if (category.contains('watch') || name.contains('watch')) {
+      assetPath = 'assets/images/watch.png';
+    } else if (name.contains('airpods') ||
+        name.contains('homepod') ||
+        category.contains('accessory')) {
+      assetPath = 'assets/images/earbuds.png';
+    } else if (name.contains('camera')) {
+      assetPath = 'assets/images/camera.png';
+    }
+
+    return Image.asset(
+      assetPath,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+      errorBuilder: (context, error, stackTrace) {
+        return const Icon(
+          Icons.image_not_supported_outlined,
+          color: Color(0xFFC9A227),
+          size: 34,
+        );
+      },
+    );
+  }
+
+  String _formatPrice(double dollarPrice) {
     if (isTurkish) {
+      final int priceAsTl = (dollarPrice * 45).round();
+      return '$priceAsTl TL';
+    }
+
+    return '\$${dollarPrice.toStringAsFixed(0)}';
+  }
+
+  String _getCategoryText(String category) {
+    final String value = category.toLowerCase();
+
+    if (!isTurkish) {
       return category;
     }
 
-    switch (category) {
-      case 'Telefon':
-        return 'Phone';
-      case 'Akıllı Saat':
-        return 'Smart Watch';
-      case 'Kulaklık':
-        return 'Headphones';
-      case 'Kamera':
-        return 'Camera';
-      case 'Aksesuar':
-        return 'Accessory';
-      default:
-        return category;
+    if (value == 'phone' || value == 'smartphones') {
+      return 'Telefon';
     }
+
+    if (value == 'computer' || value == 'laptop' || value == 'laptops') {
+      return 'Bilgisayar';
+    }
+
+    if (value == 'watch') {
+      return 'Saat';
+    }
+
+    if (value == 'accessory' ||
+        value == 'electronics' ||
+        value == 'technology') {
+      return 'Aksesuar';
+    }
+
+    return category;
   }
 }

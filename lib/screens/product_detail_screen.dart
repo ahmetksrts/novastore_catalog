@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 import '../models/product.dart';
 
 class ProductDetailScreen extends StatelessWidget {
@@ -31,12 +33,7 @@ class ProductDetailScreen extends StatelessWidget {
     final Color mutedTextColor = isDark ? Colors.white60 : Colors.grey;
     final Color cardColor = Theme.of(context).cardColor;
 
-    // İngilizce görünümde TL fiyatını sabit kurla dolara çeviriyorum
-    final int dollarPrice = (product.price / 45).round();
-    final String priceText = isTurkish
-        ? '${product.price.toStringAsFixed(0)} TL'
-        : '\$$dollarPrice';
-
+    final String priceText = _formatPrice(product.price);
     final String categoryText = _getCategoryText(product.category);
     final String descriptionText = _getDescriptionText(
       product.name,
@@ -45,36 +42,46 @@ class ProductDetailScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(''),
+        title: Text(isTurkish ? 'Ürün Detayı' : 'Product Detail'),
       ),
-      body: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          // Detay ekranında ürünün gerçek görselini gösteriyorum
-          Container(
-            height: 300,
-            color: cardColor,
-            child: Center(
-              child: Container(
-                width: 220,
-                height: 220,
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFC9A227).withAlpha(22),
-                  borderRadius: BorderRadius.circular(32),
-                ),
-                child: Image.asset(
-                  product.imagePath,
-                  fit: BoxFit.contain,
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(22),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final bool isWideScreen = constraints.maxWidth >= 850;
+          final double maxContentWidth = isWideScreen ? 1180 : double.infinity;
+          final double imagePanelHeight = isWideScreen ? 430 : 320;
+          final double imageBoxSize = isWideScreen ? 340 : 240;
+
+          return Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxContentWidth),
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  // Detay ekranında ürünün gerçek görselini daha geniş bir alanda gösteriyorum
+                  Container(
+                    height: imagePanelHeight,
+                    color: cardColor,
+                    child: Center(
+                      child: Container(
+                        width: imageBoxSize,
+                        height: imageBoxSize,
+                        padding: EdgeInsets.all(isWideScreen ? 22 : 18),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFC9A227).withAlpha(22),
+                          borderRadius: BorderRadius.circular(34),
+                        ),
+                        child: _buildProductImage(),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isWideScreen ? 34 : 22,
+                      vertical: 22,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                 Text(
                   product.name,
                   style: TextStyle(
@@ -171,6 +178,10 @@ class ProductDetailScreen extends StatelessWidget {
           ),
         ],
       ),
+            ),
+          );
+        },
+      ),
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
@@ -255,53 +266,132 @@ class ProductDetailScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildProductImage() {
+    final String imageUrl = product.imageUrl.trim();
+
+    if (imageUrl.startsWith('http')) {
+      return Image.network(
+        imageUrl,
+        fit: BoxFit.cover,
+        // Web tarafında API görselleri canvas kaynaklı sorun çıkarırsa html image kullanıyorum
+        webHtmlElementStrategy:
+            kIsWeb ? WebHtmlElementStrategy.prefer : WebHtmlElementStrategy.never,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) {
+            return child;
+          }
+
+          return const Center(
+            child: SizedBox(
+              width: 30,
+              height: 30,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.4,
+                color: Color(0xFFC9A227),
+              ),
+            ),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) {
+          return _buildLocalFallbackImage();
+        },
+      );
+    }
+
+    if (imageUrl.isNotEmpty) {
+      return Image.asset(
+        imageUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return _buildLocalFallbackImage();
+        },
+      );
+    }
+
+    return _buildLocalFallbackImage();
+  }
+
+  Widget _buildLocalFallbackImage() {
+    final String category = product.category.toLowerCase();
+    final String name = product.name.toLowerCase();
+
+    String assetPath = 'assets/images/phone.png';
+
+    if (category.contains('computer') ||
+        category.contains('laptop') ||
+        name.contains('macbook') ||
+        name.contains('imac')) {
+      assetPath = 'assets/images/laptop.png';
+    } else if (category.contains('tablet') || name.contains('ipad')) {
+      assetPath = 'assets/images/tablet.png';
+    } else if (category.contains('watch') || name.contains('watch')) {
+      assetPath = 'assets/images/watch.png';
+    } else if (name.contains('airpods') ||
+        name.contains('homepod') ||
+        category.contains('accessory')) {
+      assetPath = 'assets/images/earbuds.png';
+    } else if (name.contains('camera')) {
+      assetPath = 'assets/images/camera.png';
+    }
+
+    return Image.asset(
+      assetPath,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) {
+        return const Icon(
+          Icons.image_not_supported_outlined,
+          color: Color(0xFFC9A227),
+          size: 70,
+        );
+      },
+    );
+  }
+
+  // API fiyatı USD geldiği için TR görünümde 45 ile çarpıp TL gösteriyorum
+  String _formatPrice(double dollarPrice) {
+    if (isTurkish) {
+      final int turkishPrice = (dollarPrice * 45).round();
+      return '$turkishPrice TL';
+    }
+
+    return '\$${dollarPrice.toStringAsFixed(0)}';
+  }
+
   // Kategori metnini seçilen dile göre düzenliyorum
   String _getCategoryText(String category) {
-    if (isTurkish) {
+    if (!isTurkish) {
       return category;
     }
 
-    switch (category) {
-      case 'Telefon':
-        return 'Phone';
-      case 'Akıllı Saat':
-        return 'Smart Watch';
-      case 'Kulaklık':
-        return 'Headphones';
-      case 'Kamera':
-        return 'Camera';
-      case 'Aksesuar':
-        return 'Accessory';
+    switch (category.toLowerCase()) {
+      case 'phone':
+      case 'smartphones':
+        return 'Telefon';
+      case 'computer':
+      case 'laptop':
+      case 'laptops':
+        return 'Bilgisayar';
+      case 'tablet':
+        return 'Tablet';
+      case 'watch':
+        return 'Saat';
+      case 'accessory':
+      case 'electronics':
+      case 'technology':
+      case 'jewelery':
+      case 'jewelry':
+        return 'Aksesuar';
+      case "men's clothing":
+        return 'Erkek Giyim';
+      case "women's clothing":
+        return 'Kadın Giyim';
       default:
         return category;
     }
   }
 
-  // Ürün açıklamasını seçilen dile göre döndürüyorum
+  // API'den gelen açıklamayı seçilen dile göre kullanıyorum
   String _getDescriptionText(String productName, String fallbackDescription) {
-    if (isTurkish) {
-      return fallbackDescription;
-    }
-
-    switch (productName) {
-      case 'NovaBook Air 14':
-        return 'A slim and lightweight laptop with long battery life and strong performance. It is ideal for students, office workers, and daily users.';
-      case 'NovaPhone X':
-        return 'A modern smartphone experience with a high-resolution display, fast processor, and advanced camera system for social media, photography, and daily use.';
-      case 'NovaWatch Fit':
-        return 'A stylish and practical smart watch with sport tracking, heart rate monitoring, sleep analysis, and notification features.';
-      case 'NovaBuds Pro':
-        return 'Wireless earbuds with active noise cancellation, balanced sound quality, and a comfortable in-ear design for music, meetings, and gaming.';
-      case 'NovaTab 11':
-        return 'A portable tablet with a large display and strong performance for education, drawing, video watching, note taking, and daily use.';
-      case 'NovaCam Mini':
-        return 'A compact camera with easy portability and practical shooting modes for vlogs, travel, and daily video recording.';
-      case 'NovaPad Keyboard':
-        return 'A lightweight wireless keyboard compatible with tablets and computers. It is useful for notes, reports, and office work.';
-      case 'NovaPower 20K':
-        return 'A 20000 mAh power bank that can recharge phones, tablets, and earbuds throughout the day.';
-      default:
-        return fallbackDescription;
-    }
+    return fallbackDescription;
   }
 }

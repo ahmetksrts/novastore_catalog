@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../models/product.dart';
 
@@ -135,12 +136,7 @@ class CartScreen extends StatelessWidget {
       itemBuilder: (context, index) {
         final product = cartItems[index];
 
-        // İngilizce dilinde fiyatı TL değerinden dolara çeviriyorum
-        final int dollarPrice = (product.price / 45).round();
-        final String priceText = isTurkish
-            ? '${product.price.toStringAsFixed(0)} TL'
-            : '\$$dollarPrice';
-
+        final String priceText = _formatPrice(product.price);
         final String categoryText = _getCategoryText(product.category);
 
         return Container(
@@ -170,10 +166,7 @@ class CartScreen extends StatelessWidget {
                   color: const Color(0xFFC9A227).withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Image.asset(
-                  product.imagePath,
-                  fit: BoxFit.contain,
-                ),
+                child: _buildProductImage(product),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -234,23 +227,125 @@ class CartScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildProductImage(Product product) {
+    final String imageUrl = product.imageUrl.trim();
+
+    if (imageUrl.startsWith('http')) {
+      return Image.network(
+        imageUrl,
+        fit: BoxFit.contain,
+        // Web tarafında API görselleri canvas kaynaklı sorun çıkarırsa html image kullanıyorum
+        webHtmlElementStrategy:
+            kIsWeb ? WebHtmlElementStrategy.prefer : WebHtmlElementStrategy.never,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) {
+            return child;
+          }
+
+          return const Center(
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Color(0xFFC9A227),
+              ),
+            ),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) {
+          return _buildLocalFallbackImage(product);
+        },
+      );
+    }
+
+    if (imageUrl.isNotEmpty) {
+      return Image.asset(
+        imageUrl,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) {
+          return _buildLocalFallbackImage(product);
+        },
+      );
+    }
+
+    return _buildLocalFallbackImage(product);
+  }
+
+  Widget _buildLocalFallbackImage(Product product) {
+    final String category = product.category.toLowerCase();
+    final String name = product.name.toLowerCase();
+
+    String assetPath = 'assets/images/phone.png';
+
+    if (category.contains('computer') ||
+        category.contains('laptop') ||
+        name.contains('macbook') ||
+        name.contains('imac')) {
+      assetPath = 'assets/images/laptop.png';
+    } else if (category.contains('tablet') || name.contains('ipad')) {
+      assetPath = 'assets/images/tablet.png';
+    } else if (category.contains('watch') || name.contains('watch')) {
+      assetPath = 'assets/images/watch.png';
+    } else if (name.contains('airpods') ||
+        name.contains('homepod') ||
+        category.contains('accessory')) {
+      assetPath = 'assets/images/earbuds.png';
+    } else if (name.contains('camera')) {
+      assetPath = 'assets/images/camera.png';
+    }
+
+    return Image.asset(
+      assetPath,
+      fit: BoxFit.contain,
+      errorBuilder: (context, error, stackTrace) {
+        return const Icon(
+          Icons.image_not_supported_outlined,
+          color: Color(0xFFC9A227),
+          size: 32,
+        );
+      },
+    );
+  }
+
+  // API fiyatı USD geldiği için TR görünümde 45 ile çarpıp TL gösteriyorum
+  String _formatPrice(double dollarPrice) {
+    if (isTurkish) {
+      final int turkishPrice = (dollarPrice * 45).round();
+      return '$turkishPrice TL';
+    }
+
+    return '\$${dollarPrice.toStringAsFixed(0)}';
+  }
+
   // Kategori metnini seçilen dile göre düzenliyorum
   String _getCategoryText(String category) {
-    if (isTurkish) {
+    if (!isTurkish) {
       return category;
     }
 
-    switch (category) {
-      case 'Telefon':
-        return 'Phone';
-      case 'Akıllı Saat':
-        return 'Smart Watch';
-      case 'Kulaklık':
-        return 'Headphones';
-      case 'Kamera':
-        return 'Camera';
-      case 'Aksesuar':
-        return 'Accessory';
+    switch (category.toLowerCase()) {
+      case 'phone':
+      case 'smartphones':
+        return 'Telefon';
+      case 'computer':
+      case 'laptop':
+      case 'laptops':
+        return 'Bilgisayar';
+      case 'tablet':
+        return 'Tablet';
+      case 'watch':
+        return 'Saat';
+      case 'accessory':
+      case 'electronics':
+      case 'technology':
+      case 'jewelery':
+      case 'jewelry':
+        return 'Aksesuar';
+      case "men's clothing":
+        return 'Erkek Giyim';
+      case "women's clothing":
+        return 'Kadın Giyim';
       default:
         return category;
     }

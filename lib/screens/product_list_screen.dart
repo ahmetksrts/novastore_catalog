@@ -1,37 +1,37 @@
 import 'package:flutter/material.dart';
 
-import '../data/product_data.dart';
 import '../models/product.dart';
 import '../widgets/product_card.dart';
 import 'cart_screen.dart';
 
 class ProductListScreen extends StatelessWidget {
-  // Tüm ürünler ekranında sepet durumunu göstermek için bu listeyi alıyorum
-  final List<Product> cartItems;
+  // API'den gelen ürünleri tek ekranda listeliyorum
+  final List<Product> products;
 
-  // Ürün detayından sepete ekleme yapılabilmesi için callback olarak geliyor
+  final List<Product> cartItems;
+  // kartlarda ürünün sepette olup olmadığını göstermek için gerekli
+
   final void Function(Product product) onAddToCart;
 
-  // Sepet ekranına geçildiğinde ürün silme işlemi için kullanılıyor
   final void Function(Product product) onRemoveFromCart;
 
-  // Bu ekranın hangi dilde gösterileceğini belirliyor
   final String selectedLanguage;
 
   const ProductListScreen({
     super.key,
+    required this.products,
     required this.cartItems,
     required this.onAddToCart,
     required this.onRemoveFromCart,
     required this.selectedLanguage,
   });
 
-  // Dil kontrolünü daha okunabilir yapmak için getter kullandım
   bool get isTurkish => selectedLanguage == 'TR';
+
+  // ekran genişliğine göre grid kolon sayısını aşağıda belirliyorum
 
   @override
   Widget build(BuildContext context) {
-    // Tema durumuna göre ürün listesi ekranındaki renkleri ayarlıyorum
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final Color cardColor = Theme.of(context).cardColor;
     final Color textColor = isDark ? Colors.white : const Color(0xFF111827);
@@ -46,7 +46,6 @@ class ProductListScreen extends StatelessWidget {
         actions: [
           IconButton(
             onPressed: () {
-              // Sağ üstteki ikon ile sepet ekranına geçiliyor
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -69,12 +68,13 @@ class ProductListScreen extends StatelessWidget {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
+            // web ve mobil görünümde aynı ekran daha düzgün dursun diye
             final double screenWidth = constraints.maxWidth;
             final bool isDesktop = screenWidth >= 1000;
             final bool isTablet = screenWidth >= 700 && screenWidth < 1000;
             final int productColumnCount = isDesktop ? 4 : (isTablet ? 3 : 2);
             final double horizontalPadding = isDesktop ? 28 : 16;
-            final double productCardHeight = isDesktop ? 286 : 235;
+            final double productCardHeight = isDesktop ? 292 : 240;
 
             return Align(
               alignment: Alignment.topCenter,
@@ -92,8 +92,8 @@ class ProductListScreen extends StatelessWidget {
                       ),
                       child: Text(
                         isTurkish
-                            ? 'Tüm NovaStore ürünlerini incele.'
-                            : 'Explore all NovaStore products.',
+                            ? 'NovaStore ürünlerinin tamamına buradan göz atabilirsin.'
+                            : 'You can browse all NovaStore products here.',
                         style: TextStyle(
                           color: mutedTextColor,
                           fontSize: 15,
@@ -101,7 +101,7 @@ class ProductListScreen extends StatelessWidget {
                       ),
                     ),
 
-                    // Ürünleri ekran genişliğine göre değişen kolon sayısıyla gösteriyorum
+                    // ürün kartları burada dinamik olarak oluşturuluyor
                     Expanded(
                       child: GridView.builder(
                         physics: const AlwaysScrollableScrollPhysics(),
@@ -122,7 +122,7 @@ class ProductListScreen extends StatelessWidget {
                           mainAxisExtent: productCardHeight,
                         ),
                         itemBuilder: (context, index) {
-                          // Her ürün için ortak kart widgetını kullanıyorum
+                          // aynı kart tasarımını liste ekranında da kullanıyorum
                           return ProductCard(
                             product: products[index],
                             cartItems: cartItems,

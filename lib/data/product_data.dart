@@ -1,102 +1,87 @@
 import '../models/product.dart';
 
-// Uygulamada gösterilecek örnek ürünleri burada sabit liste olarak tuttum
-// Gerçek bir veritabanı yerine proje için yeterli olacak demo veriler kullandım
+// API bağlantısında sorun olursa kullanılabilecek yedek ürün listesi
+// Normal akışta ürünler product_api_service.dart üzerinden alınır
 
 const List<Product> products = [
-  // Laptop kategorisi için örnek ürün
   Product(
     id: 1,
     name: 'NovaBook Air 14',
-    category: 'Laptop',
+    category: 'Computer',
     description:
-        'İnce ve hafif tasarımı, uzun pil ömrü ve güçlü performansıyla öğrenciler, ofis çalışanları ve günlük kullanıcılar için ideal bir laptop modelidir.',
-    price: 28999.99,
-    imagePath: 'assets/images/laptop.png',
+        'İnce gövdeli, hafif ve günlük kullanıma uygun bir laptop modeli. Ders, ofis işleri ve temel tasarım çalışmaları için yeterli performans sunar.',
+    price: 1299,
+    imageUrl: 'https://wantapi.com/assets/images/macbook_air.png',
     rating: 4.8,
   ),
-
-  // Telefon kategorisi için örnek ürün
   Product(
     id: 2,
     name: 'NovaPhone X',
-    category: 'Telefon',
+    category: 'Phone',
     description:
-        'Yüksek çözünürlüklü ekranı, hızlı işlemcisi ve gelişmiş kamera sistemiyle sosyal medya, fotoğrafçılık ve günlük kullanım için modern bir akıllı telefon deneyimi sunar.',
-    price: 34999.99,
-    imagePath: 'assets/images/phone.png',
+        'Geniş ekranı, güçlü işlemcisi ve gelişmiş kamera özellikleriyle günlük kullanım için hazırlanmış modern bir akıllı telefon modelidir.',
+    price: 999,
+    imageUrl: 'https://wantapi.com/assets/images/iphone.png',
     rating: 4.7,
   ),
-
-  // Akıllı saat kategorisi için örnek ürün
   Product(
     id: 3,
     name: 'NovaWatch Fit',
-    category: 'Akıllı Saat',
+    category: 'Watch',
     description:
-        'Spor takibi, nabız ölçümü, uyku analizi ve bildirim özellikleriyle günlük yaşamı kolaylaştıran şık ve kullanışlı bir akıllı saat modelidir.',
-    price: 6999.99,
-    imagePath: 'assets/images/watch.png',
+        'Spor takibi, bildirimler ve sağlık ölçümleri için kullanılabilecek sade ve pratik bir akıllı saat seçeneğidir.',
+    price: 399,
+    imageUrl: 'https://wantapi.com/assets/images/watch.png',
     rating: 4.5,
   ),
-
-  // Kulaklık kategorisi için örnek ürün
   Product(
     id: 4,
     name: 'NovaBuds Pro',
-    category: 'Kulaklık',
+    category: 'Accessory',
     description:
-        'Aktif gürültü engelleme, dengeli ses kalitesi ve konforlu kulak içi tasarımıyla müzik dinleme, toplantı ve oyun deneyimini üst seviyeye taşır.',
-    price: 4999.99,
-    imagePath: 'assets/images/earbuds.png',
+        'Gürültü engelleme desteği ve dengeli ses yapısıyla müzik, toplantı ve günlük kullanım için uygun kablosuz kulaklık modelidir.',
+    price: 249,
+    imageUrl: 'https://wantapi.com/assets/images/airpods.png',
     rating: 4.6,
   ),
-
-  // Tablet kategorisi için örnek ürün
   Product(
     id: 5,
     name: 'NovaTab 11',
     category: 'Tablet',
     description:
-        'Geniş ekranı, güçlü işlemcisi ve taşınabilir yapısıyla eğitim, çizim, video izleme, not alma ve günlük kullanım için uygun bir tablet seçeneğidir.',
-    price: 18999.99,
-    imagePath: 'assets/images/tablet.png',
+        'Not alma, video izleme, çizim yapma ve taşınabilir çalışma düzeni için kullanılabilecek geniş ekranlı tablet modelidir.',
+    price: 599,
+    imageUrl: 'https://wantapi.com/assets/images/ipad.png',
     rating: 4.4,
   ),
-
-  // Kamera kategorisi için örnek ürün
   Product(
     id: 6,
-    name: 'NovaCam Mini',
-    category: 'Kamera',
+    name: 'Nova Vision Mini',
+    category: 'Accessory',
     description:
-        'Kompakt tasarımı, kolay taşınabilir gövdesi ve pratik çekim modları sayesinde vlog, seyahat ve günlük video çekimleri için kullanılabilecek kullanışlı bir kameradır.',
-    price: 12999.99,
-    imagePath: 'assets/images/camera.png',
+        'Yeni nesil teknoloji ürünlerini temsil eden, katalog içinde farklı ürün çeşidi göstermek için eklenmiş örnek cihazdır.',
+    price: 3499,
+    imageUrl: 'https://wantapi.com/assets/images/vision_pro.png',
     rating: 4.3,
   ),
-
-  // Aksesuar kategorisi için klavye ürünü
   Product(
     id: 7,
-    name: 'NovaPad Keyboard',
-    category: 'Aksesuar',
+    name: 'Nova iMac Studio',
+    category: 'Computer',
     description:
-        'Tablet ve bilgisayarlarla uyumlu, hafif ve kompakt yapıya sahip kablosuz klavye. Ders notları, rapor hazırlama ve ofis işleri için pratik kullanım sunar.',
-    price: 2499.99,
-    imagePath: 'assets/images/keyboard.png',
+        'Masaüstü kullanım için tasarlanmış, geniş ekranlı ve güçlü donanımlı örnek bilgisayar ürünüdür.',
+    price: 1299,
+    imageUrl: 'https://wantapi.com/assets/images/imac.png',
     rating: 4.2,
   ),
-
-  // Aksesuar kategorisi için taşınabilir şarj ürünü
   Product(
     id: 8,
-    name: 'NovaPower 20K',
-    category: 'Aksesuar',
+    name: 'Nova Home Speaker',
+    category: 'Accessory',
     description:
-        '20000 mAh kapasitesiyle telefon, tablet ve kulaklık gibi cihazları gün içinde tekrar şarj edebilen taşınabilir güç bankasıdır.',
-    price: 1799.99,
-    imagePath: 'assets/images/powerbank.png',
+        'Ev ve çalışma alanı için kullanılabilecek kompakt yapılı, şık görünümlü akıllı hoparlör modelidir.',
+    price: 299,
+    imageUrl: 'https://wantapi.com/assets/images/homepod.png',
     rating: 4.6,
   ),
 ];
